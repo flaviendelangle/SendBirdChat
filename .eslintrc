@@ -1,0 +1,38 @@
+{
+  "parser": "babel-eslint", // https://github.com/babel/babel-eslint
+  "env": {
+    "browser": true,
+    "node": true,
+    "jest": true,
+    "es6": true
+  },
+  "extends":[
+    "eslint:recommended",
+    "airbnb"
+  ],
+  "globals": {
+    "expect": true,
+    "sinon": true,
+    "__DEV__": true
+  },
+  "rules": {
+    "import/extensions": 0,
+    "jsx-a11y/href-no-hash": 0,
+    "react/jsx-filename-extension": 0,
+    "react/require-default-props": 0,
+    "react/forbid-prop-types": 0,
+    "react/no-unused-state": 0,
+    "jsx-a11y/label-has-for": [ 2, {
+      "required": {
+        "some": [ "nesting", "id" ]
+      }
+    }],
+    "jsx-a11y/click-events-have-key-events": 0,
+    "jsx-a11y/anchor-is-valid": [0, {
+      "components": [ "Link" ]
+    }]
+  },
+  "plugins": [
+    "react"
+  ]
+}

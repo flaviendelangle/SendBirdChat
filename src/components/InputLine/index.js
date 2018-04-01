@@ -1,0 +1,95 @@
+import React, { PureComponent } from 'react';
+import PropTypes from 'prop-types';
+
+import {
+  connect,
+  disconnect,
+  joinPublicChannel,
+  loadPreviousMessages,
+  sendMessage,
+} from '../../api';
+import { Wrapper, Button, Input } from './styles';
+
+
+export default class InputLine extends PureComponent {
+  static propTypes = {
+    username: PropTypes.string.isRequired,
+    history: PropTypes.object.isRequired,
+    updateChannel: PropTypes.func.isRequired,
+    addMessages: PropTypes.func.isRequired,
+    channel: PropTypes.object,
+  }
+
+  state = {
+    message: '',
+  };
+
+  componentDidMount() {
+    const {
+      username,
+      history,
+      updateChannel,
+      addMessages,
+    } = this.props;
+    if (username.length === 0) {
+      history.push('/login');
+    } else {
+      connect(username)
+        .then(joinPublicChannel)
+        .then(({ channel, query }) => loadPreviousMessages(channel, query))
+        .then(({ channel, messages, query }) => {
+          updateChannel(channel);
+          addMessages(channel, messages, query);
+        });
+    }
+  }
+
+  componentWillUnmount() {
+    disconnect();
+  }
+
+  onChangeMessage = (event, message) => {
+    this.setState(() => ({ message }));
+  }
+
+  onInputKeyPress = (event) => {
+    if (event.key === 'Enter') {
+      this.submit();
+    }
+  }
+
+  submit = () => {
+    const { channel, addMessages } = this.props;
+    const { message } = this.state;
+    if (message.length > 0 && channel) {
+      sendMessage(channel, message).then((fullMessage, error) => {
+        if (!error) {
+          addMessages(channel, [fullMessage]);
+          this.setState(() => ({ message: '' }));
+        }
+      });
+    }
+  }
+
+  render() {
+    const { channel } = this.props;
+    const { message } = this.state;
+    return (
+      <Wrapper>
+        <Input
+          hintText="Send a message to this channel"
+          disabled={!channel}
+          value={message}
+          onChange={this.onChangeMessage}
+          onKeyPress={this.onInputKeyPress}
+        />
+        <Button
+          label="Send"
+          onClick={this.submit}
+          disabled={!channel}
+          primary
+        />
+      </Wrapper>
+    );
+  }
+}
