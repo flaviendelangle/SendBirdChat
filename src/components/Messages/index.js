@@ -19,13 +19,18 @@ export default class Messages extends PureComponent {
     loadMore: PropTypes.func.isRequired,
   };
 
-  componentDidUpdate(prevProps) {
+  componentDidUpdate(prevProps, prevState, previousHeight) {
+    const { messages } = this.props;
+    const { messages: oldMessages } = prevProps;
     if (
-      prevProps.messages.length > 0 &&
-      this.props.messages.length > 0 &&
-      prevProps.messages[0].messageId < this.props.messages[0].messageId
+      oldMessages.length > 0 &&
+      messages.length > 0
     ) {
-      this.node.scrollTop = (this.node.scrollHeight - this.node.offsetHeight);
+      if (oldMessages[0].messageId < messages[0].messageId) {
+        this.node.scrollTop = (this.node.scrollHeight - this.node.offsetHeight);
+      } else if (oldMessages[oldMessages.length - 1] !== messages[messages.length - 1]) {
+        this.node.scrollTop = this.node.scrollHeight - previousHeight;
+      }
     }
   }
 
@@ -34,6 +39,10 @@ export default class Messages extends PureComponent {
     if (this.node.scrollTop === 0) {
       loadMore();
     }
+  }
+
+  getSnapshotBeforeUpdate() {
+    return this.node.scrollHeight;
   }
 
   node = null;
@@ -59,6 +68,7 @@ export default class Messages extends PureComponent {
                   primaryText={message}
                   secondaryText={`${sender.userId} at ${formatDate(createdAt)}`}
                   leftAvatar={<Avatar src={sender.profileUrl} />}
+                  disabled
                 />
               )) :
               <LoaderWrapper>

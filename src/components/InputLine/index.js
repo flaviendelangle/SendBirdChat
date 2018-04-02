@@ -1,22 +1,14 @@
 import React, { PureComponent } from 'react';
 import PropTypes from 'prop-types';
 
-import {
-  connect,
-  disconnect,
-  joinPublicChannel,
-  loadPreviousMessages,
-  sendMessage,
-} from '../../api';
+import { disconnect, sendMessage } from '../../api';
 import { Wrapper, Button, Input } from './styles';
 
 
 export default class InputLine extends PureComponent {
   static propTypes = {
-    username: PropTypes.string.isRequired,
-    history: PropTypes.object.isRequired,
-    updateChannel: PropTypes.func.isRequired,
     addMessages: PropTypes.func.isRequired,
+    connect: PropTypes.func.isRequired,
     channel: PropTypes.object,
   }
 
@@ -26,22 +18,9 @@ export default class InputLine extends PureComponent {
 
   componentDidMount() {
     const {
-      username,
-      history,
-      updateChannel,
-      addMessages,
+      connect
     } = this.props;
-    if (username.length === 0) {
-      history.push('/login');
-    } else {
-      connect(username)
-        .then(joinPublicChannel)
-        .then(({ channel, query }) => loadPreviousMessages(channel, query))
-        .then(({ channel, messages, query }) => {
-          updateChannel(channel);
-          addMessages(channel, messages, query);
-        });
-    }
+    connect();
   }
 
   componentWillUnmount() {

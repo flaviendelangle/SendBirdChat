@@ -9,7 +9,6 @@ import { Page, Form } from './styles';
 export default class Login extends PureComponent {
   static propTypes = {
     changeUsername: PropTypes.func.isRequired,
-    history: PropTypes.object.isRequired,
   };
 
   state = {
@@ -21,11 +20,10 @@ export default class Login extends PureComponent {
   }
 
   onLogin = () => {
-    const { changeUsername, history } = this.props;
+    const { changeUsername } = this.props;
     const { username } = this.state;
     if (username.length > 0) {
       changeUsername(username);
-      history.push('/chat');
     }
   }
 

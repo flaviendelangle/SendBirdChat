@@ -39,10 +39,28 @@ export const joinPublicChannel = () => new Promise((resolve, reject) => {
         if (error2) {
           reject(error2);
         } else {
-          const query = channel.createPreviousMessageListQuery();
-          resolve({ channel, query });
+          channel.createParticipantListQuery().next((participants, error4) => {
+            if (error4) {
+              reject(error4);
+            } else {
+              const query = channel.createPreviousMessageListQuery();
+              resolve({ channel, query, participants });
+            }
+          });
         }
       });
+    }
+  });
+});
+
+export const joinOneToOneChannel = userId => new Promise((resolve, reject) => {
+  const args = [true, null, null, null, null];
+  sb.GroupChannel.createChannelWithUserIds([userId], ...args, (channel, error) => {
+    if (error) {
+      reject(error);
+    } else {
+      const query = channel.createPreviousMessageListQuery();
+      resolve({ channel, query });
     }
   });
 });

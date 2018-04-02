@@ -1,13 +1,21 @@
 import React, { PureComponent } from 'react';
-import { BrowserRouter, Route, Switch } from 'react-router-dom';
 import MuiThemeProvider from 'material-ui/styles/MuiThemeProvider';
 
 import Login from './components/Login';
 import ChatRoom from './components/ChatRoom';
 import { Provider } from './context';
-import { init, loadPreviousMessages } from './api';
+import { connect, init, joinPublicChannel, loadPreviousMessages } from './api';
 
 import './style.css';
+
+
+const USERNAME = 'username';
+
+const createChannel = (channel, query) => ({
+  channel,
+  query,
+  messages: [],
+});
 
 export default class App extends PureComponent {
   constructor() {
@@ -16,9 +24,10 @@ export default class App extends PureComponent {
   }
 
   state = {
-    username: 'toto',
-    channel: null,
-    messages: [],
+    username: localStorage.getItem(USERNAME) || '',
+    current: '',
+    channels: {},
+    participants: [],
     isLoading: false,
   }
 
@@ -27,63 +36,128 @@ export default class App extends PureComponent {
   }
 
   onMessages = (channel, messages, query) => {
-    if (channel === this.state.channel) {
-      this.setState(prevState => ({
-        messages: [...messages, ...prevState.messages],
-        query: query || prevState.query,
-      }));
+    const { channels, current } = this.state;
+    if (channel === channels[current].channel) {
+      this.setState((prevState) => {
+        const oldData = prevState.channels[current];
+        return {
+          channels: {
+            ...prevState.channels,
+            [current]: {
+              ...oldData,
+              messages: [...messages, ...oldData.messages],
+              query: query || oldData.query,
+            },
+          },
+        };
+      });
     }
   }
 
   onRequestMoreMessages = () => {
-    const { channel, query, isLoading } = this.state;
-    if (query.hasMore && !isLoading) {
+    const { isLoading } = this.state;
+    const channel = this.getChannel();
+    const { query } = channel;
+    if (query && query.hasMore && !isLoading) {
       this.setState(() => ({ isLoading: true }));
       loadPreviousMessages(channel, query).then((result) => {
-        if (result.channel === this.state.channel) {
-          this.setState(prevState => ({
-            isLoading: false,
-            messages: [...prevState.messages, ...result.messages],
-          }));
+        if (result.channel === this.getChannel()) {
+          this.setState((prevState) => {
+            const oldData = prevState.channels[prevState.current];
+            return {
+              isLoading: false,
+              channels: {
+                ...prevState.channels,
+                [prevState.current]: {
+                  ...oldData,
+                  messages: [...oldData.messages, ...result.messages],
+                  query: query || oldData.query,
+                },
+              },
+            };
+          });
         }
       });
     }
   }
 
-  changeUsername = (username) => {
-    this.setState(() => ({ username }));
+  onRequestChannelChange = (current, currentChannel, currentQuery) => {
+    const q = currentQuery || this.state.channels[current].query;
+    loadPreviousMessages(currentChannel, q).then(({ channel, messages, query }) => {
+      this.setState(prevState => ({
+        current,
+        channels: {
+          ...prevState.channels,
+          [current]: {
+            channel,
+            query,
+            messages,
+          },
+        },
+      }));
+    });
   }
 
-  updateChannel = (channel) => {
-    this.setState(() => ({ channel, messages: [] }));
+  getChannel = () => {
+    const { channels, current } = this.state;
+    return channels[current];
+  }
+
+  changeUsername = (username) => {
+    this.setState(() => ({ username }));
+    localStorage.setItem(USERNAME, username);
+  }
+
+  connect = () => {
+    const { username } = this.state;
+    return connect(username)
+      .then(joinPublicChannel)
+      .then(({ channel, query, participants }) => {
+        this.setState(() => ({
+          participants,
+          current: 'public_channel',
+          channels: {
+            public_channel: createChannel(channel, query),
+            ...participants.reduce((result, el) => ({
+              ...result,
+              [el.userId]: createChannel(null, null),
+            }), {}),
+          },
+        }));
+        return loadPreviousMessages(channel, query);
+      })
+      .then(({ channel, messages, query }) => {
+        this.onMessages(channel, messages, query);
+      });
+  }
+
+  logout = () => {
+    this.setState(() => ({
+      username: '',
+      channel: null,
+      channelId: '',
+      channels: [],
+      participants: [],
+    }));
   }
 
   render() {
+    const { username } = this.state;
     return (
       <MuiThemeProvider>
-        <BrowserRouter>
-          <Switch>
-            <Provider value={this.state}>
-              <Route
-                path="/login"
-                render={props => (
-                  <Login changeUsername={this.changeUsername} {...props} />
-                )}
-              />
-              <Route
-                path="/chat"
-                render={props => (
-                  <ChatRoom
-                    updateChannel={this.updateChannel}
-                    addMessages={this.onMessages}
-                    loadMore={this.onRequestMoreMessages}
-                    {...props}
-                  />
-                )}
-              />
-            </Provider>
-          </Switch>
-        </BrowserRouter>
+        <Provider value={this.state}>
+          {
+            username ?
+              <ChatRoom
+                connect={this.connect}
+                addMessages={this.onMessages}
+                loadMore={this.onRequestMoreMessages}
+                switchChannel={this.onRequestChannelChange}
+                logout={this.logout}
+              /> :
+              <Login changeUsername={this.changeUsername} />
+          }
+        </Provider>
       </MuiThemeProvider>
     );
   }
