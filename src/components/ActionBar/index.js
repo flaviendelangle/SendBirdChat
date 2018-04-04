@@ -21,6 +21,6 @@ const ActionBar = ({ username, logout }) => (
 ActionBar.propTypes = {
   username: PropTypes.string.isRequired,
   logout: PropTypes.func.isRequired,
-}
+};
 
 export default ActionBar;

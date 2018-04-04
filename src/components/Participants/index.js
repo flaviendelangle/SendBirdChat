@@ -27,21 +27,26 @@ export default class Participants extends PureComponent {
   }
 
   onKeyPress = (event) => {
-    const { current, channels, switchChannel } = this.props;
+    const { current, channels } = this.props;
     if (event.keyCode === TAB_CODE) {
       const channelIds = Object.keys(channels);
       if (channelIds.length > 1) {
         const index = channelIds.indexOf(current);
         const newChannelId = channelIds[(index + 1) % channelIds.length];
-        const newChannel = channels[newChannelId];
-        if (newChannel.channel) {
-          switchChannel(newChannelId, newChannel);
-        } else {
-          joinOneToOneChannel(newChannelId).then(({ channel, query }) => {
-            switchChannel(newChannelId, channel, query);
-          });
-        }
+        this.goToChannel(newChannelId);
       }
+    }
+  }
+
+  goToChannel = (channelId) => {
+    const { switchChannel, channels } = this.props;
+    const newChannel = channels[channelId];
+    if (newChannel.channel) {
+      switchChannel(channelId, newChannel);
+    } else {
+      joinOneToOneChannel(channelId).then(({ channel, query }) => {
+        switchChannel(channelId, channel, query);
+      });
     }
   }
 
@@ -53,12 +58,14 @@ export default class Participants extends PureComponent {
           key="public_channel"
           primaryText="Public channel"
           leftAvatar={<Avatar src="" />}
+          onClick={() => this.goToChannel('public_channel')}
         />
         { participants.map(el => (
           <ListItem
             key={el.userId}
             primaryText={el.userId}
             leftAvatar={<Avatar src={el.profileUrl} />}
+            onClick={() => this.goToChannel(el.userId)}
           />
         ))}
       </Wrapper>
